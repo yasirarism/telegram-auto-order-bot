@@ -10,6 +10,9 @@ from keyboards import (
 )
 from config import Config
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Store user session data
 user_sessions = {}
@@ -30,7 +33,7 @@ async def start_command(client: Client, message: Message):
     total_users = db.get_total_users()
     total_transactions = db.get_total_successful_transactions()
     
-    welcome_text = f"""Halo, {Config.OWNER_NAME}! Selamat datang di {Config.BOT_NAME} 👋🏻
+    welcome_text = f"""Halo, {user.first_name}! Selamat datang di {Config.BOT_NAME} 👋🏻
 
 ╭  ◦ Total Pengguna Bot: {total_users} Orang
 ╰  ◦ Total Transaksi Berhasil: {total_transactions}x"""
@@ -369,8 +372,8 @@ async def admin_deposit_command(client: Client, message: Message):
                 target_user_id,
                 f"💰 **Deposit Berhasil!**\n\nSaldo Anda telah ditambah sebesar Rp {amount:,.0f}"
             )
-        except:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to notify user {target_user_id}: {e}")
             
     except ValueError:
         await message.reply_text("❌ Format salah. User ID dan amount harus berupa angka.")

@@ -3,6 +3,9 @@ from pyrogram.types import Message
 from database import db
 from config import Config
 from keyboards import get_main_keyboard
+import logging
+
+logger = logging.getLogger(__name__)
 
 @Client.on_message(filters.command("addproduct") & filters.private)
 async def add_product_command(client: Client, message: Message):
@@ -153,7 +156,8 @@ async def broadcast_command(client: Client, message: Message):
         try:
             await message.reply_to_message.copy(user["user_id"])
             success += 1
-        except:
+        except Exception as e:
+            logger.warning(f"Failed to broadcast to user {user['user_id']}: {e}")
             failed += 1
     
     await status_msg.edit_text(
