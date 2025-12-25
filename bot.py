@@ -1,5 +1,6 @@
 """Main Telegram bot implementation."""
 import logging
+import shlex
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -471,8 +472,7 @@ async def add_product_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         return
     
-    # Simple parsing: split by spaces but respect quotes
-    import shlex
+    # Parse arguments respecting quoted strings
     try:
         args = shlex.split(parts[1])
     except ValueError:

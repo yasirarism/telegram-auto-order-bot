@@ -7,7 +7,8 @@ load_dotenv()
 
 # Bot configuration
 BOT_TOKEN = os.getenv('BOT_TOKEN', '')
-ADMIN_ID = int(os.getenv('ADMIN_ID', '0'))
+ADMIN_ID_STR = os.getenv('ADMIN_ID', '')
+ADMIN_ID = int(ADMIN_ID_STR) if ADMIN_ID_STR else None
 
 # Database configuration
 DATABASE_NAME = 'bot_database.db'
@@ -21,5 +22,5 @@ WELCOME_MESSAGE = """Halo, Yasir Store! Selamat datang di Arukaey Bot 👋🏻
 # Validation
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN must be set in .env file")
-if ADMIN_ID == 0:
+if ADMIN_ID is None:
     raise ValueError("ADMIN_ID must be set in .env file")
