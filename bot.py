@@ -83,8 +83,9 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif text == '💬 Private Message':
         await update.message.reply_text(
-            f"Click here to message the admin: @admin\n\n"
-            f"Or use this link to start a chat with admin ID: {config.ADMIN_ID}"
+            f"To contact the admin, please send a message to:\n\n"
+            f"Admin ID: {config.ADMIN_ID}\n\n"
+            f"You can also use Telegram's search to find the admin by ID."
         )
     
     elif text == '📦 Catalog':
@@ -184,6 +185,12 @@ async def show_deposit_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle inline button callbacks."""
     query = update.callback_query
+    
+    # Check if this is an admin callback
+    if query.data.startswith('admin_'):
+        await admin_callback(update, context)
+        return
+    
     await query.answer()
     
     if query.data == 'top_products':
@@ -191,6 +198,30 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif query.data == 'top_buyers':
         await show_top_buyers(query, context)
+    
+    elif query.data == 'back_catalog':
+        # Recreate catalog view
+        products = db.get_all_products()
+        if not products:
+            await query.edit_message_text("📦 No products available.")
+            return
+        
+        message = "📦 *Product Catalog*\n\n"
+        keyboard = []
+        for product in products:
+            message += f"*{product['product_id']}. {product['name']}*\n"
+            message += f"   💰 Price: Rp {product['price']:,.0f}\n"
+            message += f"   📦 Stock: {product['stock']} available\n\n"
+            
+            keyboard.append([
+                InlineKeyboardButton(
+                    f"{product['product_id']}. {product['name']}",
+                    callback_data=f"product_{product['product_id']}"
+                )
+            ])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(message, parse_mode='Markdown', reply_markup=reply_markup)
     
     elif query.data.startswith('product_'):
         product_id = int(query.data.split('_')[1])
@@ -428,18 +459,38 @@ async def add_product_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("❌ You don't have admin access.")
         return
     
-    if len(context.args) < 3:
+    # Parse command text to handle quoted strings
+    full_text = update.message.text
+    parts = full_text.split(' ', 1)
+    
+    if len(parts) < 2:
         await update.message.reply_text(
             "Usage: /addproduct <name> <price> <stock> [description]\n"
-            'Example: /addproduct "Premium Package" 50000 10 "Premium features"'
+            'Example: /addproduct "Premium Package" 50000 10 "Premium features"\n'
+            'Or: /addproduct Premium_Package 50000 10 Premium features'
+        )
+        return
+    
+    # Simple parsing: split by spaces but respect quotes
+    import shlex
+    try:
+        args = shlex.split(parts[1])
+    except ValueError:
+        args = parts[1].split()
+    
+    if len(args) < 3:
+        await update.message.reply_text(
+            "Usage: /addproduct <name> <price> <stock> [description]\n"
+            'Example: /addproduct "Premium Package" 50000 10 "Premium features"\n'
+            'Or: /addproduct Premium_Package 50000 10 Premium features'
         )
         return
     
     try:
-        name = context.args[0]
-        price = float(context.args[1])
-        stock = int(context.args[2])
-        description = ' '.join(context.args[3:]) if len(context.args) > 3 else "No description"
+        name = args[0]
+        price = float(args[1])
+        stock = int(args[2])
+        description = ' '.join(args[3:]) if len(args) > 3 else "No description"
         
         db.add_product(name, description, price, stock)
         
@@ -452,7 +503,7 @@ async def add_product_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             parse_mode='Markdown'
         )
         
-    except ValueError:
+    except (ValueError, IndexError):
         await update.message.reply_text("❌ Invalid price or stock value.")
 
 def main():
